@@ -5,54 +5,71 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"strconv"
-	"sort"
-	"crypto/sha1"
 	"net/http"
 	"strings"
 	"encoding/json"
+	"time"
 )
 
 var db, _ = gorm.Open(connstr)
 
+type Model struct {
+	ID        uint       `gorm:"primary" json:"id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
+}
+
 type User struct {
-	gorm.Model
-	FirstName string `gorm:"index"`
-	LastName  string `gorm:"index"`
-	UserName  string `gorm:"index"`
-	PhotoUrl  string `gorm:"size:3000"`
-	Hash      string `gorm:"index"`
-	AuthDate  string
-	Posts     []Post
-	Role      string
+	Model
+	FirstName string     `gorm:"index" json:"first_name"`
+	LastName  string     `gorm:"index" json:"last_name"`
+	Username  string     `gorm:"index" json:"username"`
+	FullName  string     `gorm:"index" json:"full_name"`
+	PhotoUrl  string     `gorm:"size:3000" json:"photo_url"`
+	Hash      string     `gorm:"index" json:"hash"`
+	AuthDate  string     `json:"auth_date"`
+	Posts     []Post     `json:"posts"`
+	Role      string     `json:"role"`
+	Sex       string     `json:"sex"`
+	Info      string     `json:"info" gorm:"size:3000"`
+	Birthday  time.Time `json:"birthday"`
+	Age       uint       `json:"age"`
 }
 
 type Post struct {
-	gorm.Model
-	Title         string `gorm:"size:140"`
-	UserID        uint   `gorm:"index"`
-	Url           string `gorm:"size:3000"`
-	ImgUrl        string `gorm:"size:3000"`
-	LikesCount    int
-	ViewsCount    int
-	CommentsCount int
-	Comments      []Comment
+	Model
+	Title         string    `gorm:"size:140" json:"title"`
+	Caption       string    `gorm:"size:3000" json:"caption"`
+	UserID        uint      `gorm:"index; column:user_id" json:"user_id"`
+	Url           string    `gorm:"size:3000" json:"url"`
+	ImgUrl        string    `gorm:"size:3000" json:"img_url"`
+	LikesCount    int       `json:"likes_count"`
+	ViewsCount    int       `json:"views_count"`
+	CommentsCount int       `json:"comments_count"`
+	Comments      []Comment `json:"comments"`
+	Special       string    `json:"special"`
+	Type          string    `json:"type"`
 }
 
 type Comment struct {
-	gorm.Model
-	Text   string `gorm:"size 300; index"`
-	UserID uint   `gorm:"index"`
-	PostID uint   `gorm:"index"`
+	Model
+	Text   string `gorm:"size 500; index" json:"text"`
+	UserID uint   `gorm:"index" json:"user_id"`
+	PostID uint   `gorm:"index" json:"post_id"`
+	Date   string `json:"date"`
 }
 
 type Like struct {
 	gorm.Model
-	PostID uint `gorm:"index"`
-	UserID uint `gorm:"index"`
+	PostID uint `gorm:"index" json:"post_id"`
+	UserID uint `gorm:"index" json:"user_id"`
+}
+
+type Chat struct {
+	Model
+	Title string `gorm:"size:200" json:"title"`
+	Url   string `gorm:"size:3000" json:"url"`
 }
 
 //Инициализация БД
@@ -62,7 +79,7 @@ func InitDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	db.AutoMigrate(&User{}, &Post{}, &Comment{})
+	db.AutoMigrate(&User{}, &Post{}, &Comment{}, &Chat{})
 }
 
 //Получение данных о юзере из бд
@@ -85,11 +102,44 @@ func SaveUser(user User) error {
 	}
 	u.LastName = user.LastName
 	u.PhotoUrl = user.PhotoUrl
-	u.UserName = user.UserName
+	u.Username = user.Username
 	u.AuthDate = user.AuthDate
 	u.FirstName = user.FirstName
+
 	u.Hash = user.Hash
 	return db.Save(&u).Error
+}
+
+func SearchUser (searchstring string) ([]User, error) {
+	var users, u []User
+	templ := "%" + searchstring + "%"
+	if err := db.Where("full_name LIKE ?", templ).Find(&users).Error; err != nil {
+		return []User{}, err
+	}
+	for i := range users {
+		if strings.HasPrefix(strings.ToLower(users[i].FirstName), strings.ToLower(searchstring)) ||
+			strings.HasPrefix(strings.ToLower(users[i].LastName), strings.ToLower(searchstring)) ||
+			strings.HasPrefix(strings.ToLower(users[i].FullName), strings.ToLower(searchstring)) ||
+			strings.HasPrefix(strings.ToLower(users[i].Username), strings.ToLower(searchstring))	{
+			u = append(u, users[i])
+		}
+	}
+	return u, nil
+}
+
+func EditUser (u User) error {
+	var user User
+	if err := db.Where("id = ?", u.ID).Find(&user).Error; err != nil {
+		return err
+	}
+	user.Sex = u.Sex
+	user.Info = u.Info
+	user.Birthday = u.Birthday
+	user.Age = u.Age
+	if err := db.Save(&user).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 //Создание поста в бд
@@ -105,9 +155,11 @@ func ParsePost(url string) (Post, error) {
 		"?return_content=true"
 	var TelegraphPage struct {
 		Result struct {
-			Title    string `json:"title"`
-			ImageURL string `json:"image_url"`
-			Views    int    `json:"views"`
+			Title       string `json:"title"`
+			ImageURL    string `json:"image_url"`
+			URL         string `json:"url"`
+			Views       int    `json:"views"`
+			Description string `json:"description"`
 		}
 	}
 	resp, err := http.Get(url)
@@ -122,6 +174,8 @@ func ParsePost(url string) (Post, error) {
 	post.Title = TelegraphPage.Result.Title
 	post.ImgUrl = TelegraphPage.Result.ImageURL
 	post.ViewsCount = TelegraphPage.Result.Views
+	post.Url = TelegraphPage.Result.URL
+	post.Caption = TelegraphPage.Result.Description
 	return post, nil
 }
 
@@ -134,6 +188,10 @@ func GetPost(id uint) (Post, error) {
 	if err := db.Where("post_id = ?", id).Find(&post.Comments).Error; err != nil {
 		return Post{}, err
 	}
+	post.CommentsCount = len(post.Comments)
+	if err := db.Where("post_id = ?", id).Find(&Like{}).Count(&post.LikesCount).Error; err != nil {
+		return Post{}, err
+	}
 	return post, nil
 }
 
@@ -143,9 +201,9 @@ func DeletePost(id uint) error {
 }
 
 //Получение новостной ленты из бд постранично
-func GetFeed(page int) ([]Post, error) {
+func GetFeed() ([]Post, error) {
 	var posts []Post
-	if err := db.Order("created_at desc").Offset(page * 10).Limit(10).Find(&posts).Error; err != nil {
+	if err := db.Order("created_at desc").Find(&posts).Error; err != nil {
 		return []Post{}, err
 	}
 	return posts, nil
@@ -159,57 +217,4 @@ func AddComment(comment Comment) error {
 //Удаление комментария из бд
 func DeleteComment(id uint) error {
 	return db.Where("id = ?", id).Delete(&Comment{}).Error
-}
-
-func ValidateAuth(hash string) {
-	var user User
-	if err := db.Where("hash=?", hash).First(&user).Error; err != nil {
-		log.Println(err)
-	}
-	log.Println(user)
-	var data = make(map[string]string)
-	var keys []string
-	if user.AuthDate != "" {
-		data["auth_date"] = user.AuthDate
-	}
-	if user.FirstName != "" {
-		data["first_name"] = user.FirstName
-	}
-	if user.ID > 0 {
-		data["id"] = strconv.Itoa(int(user.ID))
-	}
-	if user.LastName != "" {
-		data["last_name"] = user.LastName
-	}
-	if user.PhotoUrl != "" {
-		data["photo_url"] = user.PhotoUrl
-	}
-	if user.UserName != "" {
-		data["username"] = user.UserName
-	}
-	var message string
-	for key := range data {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		message += key + "=" + data[key] + "\n"
-	}
-	if len(message) > 2 {
-		message = message[:len(message)-1]
-	}
-}
-
-func ComputeHmac256(message string, secret string) string {
-	key := []byte("cea09579535a26a3970e796eb48da1c6f17ce1a3a03f8f783abfe28869d8f065")
-	h := hmac.New(sha256.New, key)
-	h.Write([]byte(message))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func SHA256(secret string) []byte {
-	key := []byte(secret)
-	h := sha1.New()
-	h.Write([]byte(key))
-	return h.Sum(nil)
 }

@@ -74,6 +74,18 @@ type Chat struct {
 	Url   string `gorm:"size:3000" json:"url"`
 }
 
+type FeedView struct {
+	Posts []Post
+}
+
+type ChatsView struct {
+	Chats []Chat
+}
+
+type UsersView struct {
+	Users []User
+}
+
 //Инициализация БД
 func InitDB() {
 	var err error

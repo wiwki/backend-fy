@@ -142,6 +142,9 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg, _ := json.Marshal(&users)
+	if len(users) == 0 {
+		msg, _ = json.Marshal([]map[string]string{})
+	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }
@@ -242,30 +245,41 @@ func AddChatHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminView(w http.ResponseWriter, r *http.Request) {
-	t  := template.Must(template.ParseFiles("templates/admin.html"))
+	t := template.Must(template.ParseFiles("templates/admin.html"))
 	t.ExecuteTemplate(w, "admin", nil)
 }
 
 func AddChatView(w http.ResponseWriter, r *http.Request) {
-
+	t := template.Must(template.ParseFiles("templates/admin.html"))
+	t.ExecuteTemplate(w, "chat-add", nil)
 }
 
 func AddPostView(w http.ResponseWriter, r *http.Request) {
-
+	t := template.Must(template.ParseFiles("templates/admin.html"))
+	t.ExecuteTemplate(w, "post-add", nil)
 }
 
 func PostView(w http.ResponseWriter, r *http.Request) {
-
+	t := template.Must(template.ParseFiles("templates/admin.html"))
+	posts, _ := GetFeed()
+	feedview := FeedView{posts}
+	t.ExecuteTemplate(w, "post", feedview)
 }
 
 func ChatView(w http.ResponseWriter, r *http.Request) {
-
+	t := template.Must(template.ParseFiles("templates/admin.html"))
+	chats, _ := GetAllChats()
+	chatsview := ChatsView{chats}
+	t.ExecuteTemplate(w, "chat", chatsview)
 }
 
 func UserView(w http.ResponseWriter, r *http.Request) {
-
+	t := template.Must(template.ParseFiles("templates/admin.html"))
+	users, _ := SearchUser("")
+	usersview := UsersView{users}
+	t.ExecuteTemplate(w, "user", usersview)
 }
 
-func UserSearchView(w http.ResponseWriter, r *http.Request){
+func UserSearchView(w http.ResponseWriter, r *http.Request) {
 
 }

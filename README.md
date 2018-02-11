@@ -5,4 +5,5 @@
 <br>Backend Go
 <br>Архитектура MVC, view на стороне клиента и на админском кабинете.
 <br>Приложение делится на 2 модуля:
-<br>Backend и Админский Frontend(js, css, html).
+<br>Backend и Админский Frontend(js, css, html) - pluma.me/admin.
+

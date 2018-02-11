@@ -30,7 +30,7 @@ func TelegramAuthHandler(w http.ResponseWriter, r *http.Request) {
 	user.Hash = hash
 	user.AuthDate = authdate
 	user.Role = "user"
-	user.Birthday = time.Now().Add(-time.Hour * 876000)
+	user.Birthday = time.Now()
 	if err := SaveUser(user); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,12 +107,12 @@ func EditUserHandler(w http.ResponseWriter, r *http.Request) {
 	user.Age = uint(time.Since(user.Birthday).Hours() / 8670)
 	if err := EditUser(user); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		msg, _ := json.Marshal(map[string]string{"message":err.Error()})
+		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	msg, _ := json.Marshal(map[string]string{"message":"success"})
+	msg, _ := json.Marshal(map[string]string{"message": "success"})
 	w.Write(msg)
 }
 
@@ -137,7 +137,7 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request) {
 	users, err := SearchUser(searchstring)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		msg, _ := json.Marshal(map[string]string{"message":err.Error()})
+		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
 		return
 	}
@@ -154,6 +154,7 @@ func GetPostHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
+		return
 	}
 	msg, _ := json.Marshal(&post)
 	w.WriteHeader(http.StatusOK)
@@ -168,7 +169,7 @@ func GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
-
+		return
 	}
 	msg, _ := json.Marshal(&feed)
 	w.WriteHeader(http.StatusOK)
@@ -178,17 +179,16 @@ func GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 //Контроллер добавления комментария в бд
 func AddCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var comment Comment
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&comment)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
-		w.Write(msg)
-	}
+	postid, _ := strconv.Atoi(r.URL.Query().Get("post_id"))
+	userid, _ := strconv.Atoi(r.URL.Query().Get("user_id"))
+	comment.Text = r.URL.Query().Get("text")
+	comment.PostID = uint(postid)
+	comment.User.ID = uint(userid)
 	if err := AddComment(comment); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 	msg, _ := json.Marshal(map[string]string{"message": "success"})
@@ -203,8 +203,69 @@ func DeleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
 		w.Write(msg)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 	msg, _ := json.Marshal(map[string]string{"message": "success"})
 	w.Write(msg)
+}
+
+//Контроль получения списка чатов
+func GetAllChatHandler(w http.ResponseWriter, r *http.Request) {
+	chats, err := GetAllChats()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
+		w.Write(msg)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	msg, _ := json.Marshal(&chats)
+	w.Write(msg)
+}
+
+//Контроллер добавления чата в бд
+func AddChatHandler(w http.ResponseWriter, r *http.Request) {
+	var chat Chat
+	chat.Url = r.URL.Query().Get("url")
+	chat.Title = r.URL.Query().Get("title")
+
+	if err := AddChat(chat); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(map[string]string{"message": err.Error()})
+		w.Write(msg)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	msg, _ := json.Marshal(map[string]string{"message": "success"})
+	w.Write(msg)
+}
+
+func AdminView(w http.ResponseWriter, r *http.Request) {
+	t  := template.Must(template.ParseFiles("templates/admin.html"))
+	t.ExecuteTemplate(w, "admin", nil)
+}
+
+func AddChatView(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func AddPostView(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func PostView(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func ChatView(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func UserView(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func UserSearchView(w http.ResponseWriter, r *http.Request){
+
 }

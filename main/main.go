@@ -34,12 +34,13 @@ func Init() {
 	user, _ := config.GetString("user", "user")
 	pass, _ := config.GetString("pass", "pass")
 	dbname, _ := config.GetString("dbname", "test")
-	connstr = user + ":" + pass + "@/" + dbname + "?charset=utf8&parseTime=True&loc=Local"
+	connstr = user + ":" + pass + "@/" + dbname + "?charset=utf8mb4&parseTime=True&loc=Local"
 	InitDB()
 }
 //Создание экземпляра сервера и определение endpoint-ов роутера.
 func Serve() {
 	r := mux.NewRouter()
+	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("static"))))
 	r.HandleFunc("/auth", TelegramAuthHandler).Methods("GET")
 	r.HandleFunc("/signin", LoginViewHandler).Methods("GET")
 	r.HandleFunc("/user/search", SearchUserHandler).Methods("GET")
@@ -51,7 +52,15 @@ func Serve() {
 	r.HandleFunc("/feed", GetFeedHandler).Methods("GET")
 	r.HandleFunc("/comment", AddCommentHandler).Methods("PUT")
 	r.HandleFunc("/comment", DeleteCommentHandler).Methods("DELETE")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.HandleFunc("/chat", GetAllChatHandler).Methods("GET")
+	r.HandleFunc("/chat", AddChatHandler).Methods("PUT")
+	r.HandleFunc("/admin", AdminView).Methods("GET")
+	r.HandleFunc("/admin/chat/add", AddChatView).Methods("GET")
+	r.HandleFunc("/admin/post/add", AddPostView).Methods("GET")
+	r.HandleFunc("/admin/chat", ChatView).Methods("GET")
+	r.HandleFunc("/admin/post", PostView).Methods("GET")
+	r.HandleFunc("/admin/user", UserView).Methods("GET")
+	r.HandleFunc("/admin/user/search", UserSearchView).Methods("GET")
 	srv := &http.Server{
 		Addr:         "0.0.0.0:" + port,
 		WriteTimeout: time.Second * 15,

@@ -65,7 +65,6 @@ func Serve() {
 	r.HandleFunc("/admin/chat", ChatView).Methods("GET")
 	r.HandleFunc("/admin/post", PostView).Methods("GET")
 	r.HandleFunc("/admin/user", UserView).Methods("GET")
-	r.HandleFunc("/admin/user/search", UserSearchView).Methods("GET")
 	srv := &http.Server{
 		Addr:         "0.0.0.0:" + port,
 		WriteTimeout: time.Second * 15,

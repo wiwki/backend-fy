@@ -93,6 +93,7 @@ func AddPostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(msg)
 }
 
+//Контроллер редактирования данных юзера
 func EditUserHandler(w http.ResponseWriter, r *http.Request) {
 	var user User
 	id, _ := strconv.Atoi(r.URL.Query().Get("id"))
@@ -131,6 +132,7 @@ func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(msg)
 }
 
+//Контроллер Поиска юзеров
 func SearchUserHandler(w http.ResponseWriter, r *http.Request) {
 	searchstring := r.URL.Query().Get("q")
 	log.Println(searchstring)
@@ -244,6 +246,7 @@ func AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(msg)
 }
 
+//Контроллеры страниц админского кабинета
 func AdminView(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("templates/admin.html"))
 	t.ExecuteTemplate(w, "admin", nil)
@@ -278,8 +281,4 @@ func UserView(w http.ResponseWriter, r *http.Request) {
 	users, _ := SearchUser("")
 	usersview := UsersView{users}
 	t.ExecuteTemplate(w, "user", usersview)
-}
-
-func UserSearchView(w http.ResponseWriter, r *http.Request) {
-
 }

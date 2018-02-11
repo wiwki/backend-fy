@@ -14,6 +14,7 @@ import (
 
 var db, _ = gorm.Open(connstr)
 
+//Все сущности
 type Model struct {
 	ID        uint       `gorm:"primary" json:"id"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -70,8 +71,9 @@ type Like struct {
 
 type Chat struct {
 	Model
-	Title string `gorm:"size:200" json:"title"`
-	Url   string `gorm:"size:3000" json:"url"`
+	ImgUrl string `gorm:"size 3000" json:"img_url"`
+	Title  string `gorm:"size:200" json:"title"`
+	Url    string `gorm:"size:3000" json:"url"`
 }
 
 type FeedView struct {
@@ -247,6 +249,7 @@ func GetAllChats() ([]Chat, error) {
 	return chats, err
 }
 
+//Добавление чата
 func AddChat(chat Chat) error {
 	return db.Create(&chat).Error
 }
